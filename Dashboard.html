@@ -1,0 +1,1345 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <title>Mass Email Tool</title>
+  
+  <!-- Material Icons and Roboto -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+  
+  <style>
+    /* Global Styles */
+    body { margin: 0; padding: 0; background: #f5f5f5;
+      font-family: 'Roboto', sans-serif; color: #333;
+    }
+    .container { max-width: 1050px; margin: 0 auto; padding: 20px; }
+    .card {
+      background: #fff; border-radius: 8px; padding: 24px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .header { text-align: center; background: #4285F4; color: #fff;
+      padding: 16px; margin: -24px -24px 20px; border-radius: 8px 8px 0 0;
+    }
+    h1 { margin: 0; font-size: 24px; font-weight: 500; }
+    .subheader { margin: 0; font-size: 16px; opacity: 0.8; }
+    
+    /* Form Groups & Inputs */
+    .form-group { margin-bottom: 20px; }
+    label { display: block; margin-bottom: 6px; font-weight: 500; }
+    input[type="text"], input[type="url"], textarea {
+      width: 100%; padding: 10px; border: 1px solid #ddd;
+      border-radius: 4px; font-size: 14px; box-sizing: border-box;
+    }
+    input:focus, textarea:focus {
+      border-color: #4285F4; box-shadow: 0 0 0 2px rgba(66,133,244,0.2);
+      outline: none;
+    }
+    
+    /* Tokens */
+    .token-display {
+      background: #f5f5f5; padding: 10px; border-radius: 4px;
+      max-height: 120px; overflow-y: auto; margin-bottom: 20px;
+    }
+    .token {
+      background: #4285F4; color: #fff; padding: 4px 8px;
+      border-radius: 4px; margin: 4px; display: inline-block;
+      cursor: pointer; transition: background 0.3s;
+    }
+    .token:hover { background: #3367D6; }
+    
+    /* Tags Input for CC, BCC, & Drive Links */
+    .tags-input {
+      background: #fff; border: 1px solid #ddd; border-radius: 4px;
+      padding: 10px; min-height: 40px; margin-bottom: 20px;
+      display: flex; flex-wrap: wrap; align-items: center;
+    }
+    .tags-input input {
+      border: none; flex-grow: 1; min-width: 120px; outline: none;
+      background: transparent;
+    }
+    .tag {
+      background: #e0e0e0; padding: 4px 8px; border-radius: 16px;
+      margin: 4px; display: inline-flex; align-items: center;
+      font-size: 14px; cursor: pointer;
+    }
+    .tag.invalid { background: #f8d7da; }
+    .tag.pending { background: #e2e3e5; }
+    .tag.valid { background: #d4edda; }
+    .tag .material-icons { font-size: 18px; margin-left: 4px; }
+    
+    /* Editor */
+    .editor-container {
+      border: 1px solid #ddd; border-radius: 4px;
+      margin-bottom: 20px; overflow: hidden;
+    }
+    .editor-toolbar {
+      background: #f5f5f5; border-bottom: 1px solid #ddd;
+      display: flex; flex-wrap: wrap; align-items: center; padding: 8px;
+    }
+    .editor-content {
+      background: #fff; min-height: 150px; padding: 16px; overflow-y: auto;
+    }
+    .editor-content:focus { outline: none; }
+    
+    .toolbar-group {
+      display: flex; align-items: center; margin-right: 12px;
+      border-right: 1px solid #ddd; padding-right: 8px; margin-bottom: 4px;
+    }
+    .toolbar-group:last-child { border-right: none; }
+    .toolbar-button {
+      width: 36px; height: 36px; border: none; background: transparent;
+      border-radius: 4px; cursor: pointer; margin-right: 4px;
+      display: flex; align-items: center; justify-content: center;
+      color: #555; transition: background 0.3s;
+    }
+    .toolbar-button:hover { background: #e0e0e0; color: #4285F4; }
+    .toolbar-select {
+      height: 36px; border: 1px solid #ddd; border-radius: 4px;
+      background: #fff; margin-right: 4px; font-size: 14px; cursor: pointer;
+    }
+    
+    /* Font Size Control using Dropdown and Plus/Minus Buttons */
+    .font-size-control select {
+      height: 36px; border: 1px solid #ddd; border-radius: 4px;
+      background: #fff; font-size: 14px; margin-right: 4px;
+    }
+    .fs-btn {
+      width: 36px; height: 36px; border: none; background: transparent;
+      border-radius: 4px; cursor: pointer; display: flex;
+      align-items: center; justify-content: center; color: #555;
+      transition: background 0.3s; margin-right: 4px;
+    }
+    .fs-btn:hover { background: #e0e0e0; color: #4285F4; }
+    
+    /* Color Button with Indicator */
+    .color-button {
+      position: relative; display: flex; align-items: center;
+      cursor: pointer;
+    }
+    .color-indicator {
+      width: 16px; height: 16px; margin-left: 4px;
+      border: 1px solid #ccc; display: inline-block;
+    }
+    
+    /* Color Palette Dropdown (10 columns x 8 rows) */
+    .color-palette-popup {
+      display: none; position: absolute; width: 320px;
+      background: #fff; border: 1px solid #ccc; border-radius: 4px;
+      padding: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); z-index: 999;
+    }
+    .color-swatch {
+      width: 28px; height: 28px; margin: 2px; border: 1px solid #ccc;
+      cursor: pointer;
+    }
+    .color-swatch:hover { border-color: #4285F4; }
+    .custom-color-row {
+      clear: both; margin-top: 8px; display: flex; align-items: center;
+    }
+    .custom-color-row input { width: 100px; margin-right: 8px; }
+    .btn-custom-color {
+      background: #4285F4; color: #fff; padding: 4px 8px;
+      border: none; border-radius: 4px; cursor: pointer;
+    }
+    .btn-custom-color:hover { background: #3367D6; }
+    
+    /* Modals */
+    .modal {
+      display: none; position: fixed; top: 0; left: 0;
+      width: 100%; height: 100%; background: rgba(0,0,0,0.5);
+      z-index: 1000; justify-content: center; align-items: center;
+    }
+    .modal-content {
+      background: #fff; border-radius: 8px; padding: 20px;
+      width: 90%; max-width: 600px; max-height: 90vh; overflow: auto;
+      position: relative;
+    }
+    .modal-close {
+      position: absolute; top: 8px; right: 8px; font-size: 18px;
+      cursor: pointer; color: #666;
+    }
+    .modal-title { margin-top: 0; font-size: 18px; color: #4285F4; }
+    .modal-footer {
+      display: flex; justify-content: flex-end; margin-top: 16px;
+    }
+    .modal-footer button {
+      margin-left: 8px; padding: 8px 16px; border: none;
+      border-radius: 4px; cursor: pointer; font-size: 14px;
+    }
+    .modal-footer button.cancel { background: #ccc; color: #333; }
+    .modal-footer button.confirm { background: #4285F4; color: #fff; }
+    .modal select {
+      padding: 8px; border: 1px solid #ddd; border-radius: 4px;
+      font-size: 14px;
+    }
+    
+    /* Buttons */
+    .btn-action {
+      padding: 10px 16px; background: #4285F4; color: #fff;
+      border: none; border-radius: 4px; cursor: pointer; font-size: 14px;
+    }
+    .btn-action:hover { background: #3367D6; }
+    
+    /* Attachments */
+    #uploadButton {
+      background: #4285F4; color: #fff; padding: 8px 16px;
+      border: none; border-radius: 4px; cursor: pointer; font-size: 14px;
+    }
+    #uploadButton:hover { background: #3367D6; }
+    .attachments-container {
+      border: 2px dashed #ddd; border-radius: 4px; text-align: center;
+      padding: 20px; margin-bottom: 20px;
+      transition: border 0.3s, background 0.3s;
+    }
+    .attachments-container.drag-over {
+      border-color: #4285F4; background: rgba(66,133,244,0.05);
+    }
+    .attachment-list {
+      display: flex; flex-wrap: wrap; margin-top: 16px;
+    }
+    .attachment-item {
+      display: flex; align-items: center; background: #f5f5f5;
+      border-radius: 4px; padding: 8px 12px; margin: 4px;
+    }
+    
+    /* Google Drive Links – tags input */
+    #driveLinksInput { margin-bottom: 8px; }
+    
+    /* Action Row & Status */
+    .action-row {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 20px;
+    }
+    .status-message {
+      display: none; margin-top: 16px; padding: 16px; border-radius: 4px;
+    }
+    .status-success {
+      background: #E8F5E9; color: #2E7D32; border: 1px solid #C8E6C9;
+    }
+    .status-error {
+      background: #FFEBEE; color: #C62828; border: 1px solid #FFCDD2;
+    }
+    
+    /* Confirmation Modal */
+    #confirmModal .modal-content {
+      text-align: center;
+    }
+    #confirmModal ul {
+      list-style: none; padding: 0; margin: 10px 0; text-align: left;
+      max-height: 200px; overflow-y: auto;
+    }
+    #confirmModal li { padding: 4px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="header">
+        <h1>Mass Email Tool</h1>
+        <p class="subheader">Personalized Email Campaigns</p>
+      </div>
+      
+      <!-- Available Tokens -->
+      <div class="form-group">
+        <label>Available Tokens:</label>
+        <div class="token-display" id="availableTokens"></div>
+      </div>
+      
+      <!-- Email Subject -->
+      <div class="form-group">
+        <label>Email Subject:</label>
+        <input type="text" id="emailSubject" placeholder="Hello {FIRST_NAME}">
+      </div>
+      
+      <!-- CC & BCC Recipients -->
+      <div class="form-group">
+        <label>CC Recipients:</label>
+        <div class="tags-input" id="ccTagsInput">
+          <input type="text" placeholder="Enter email and press Enter">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>BCC Recipients:</label>
+        <div class="tags-input" id="bccTagsInput">
+          <input type="text" placeholder="Enter email and press Enter">
+        </div>
+      </div>
+      
+      <!-- Email Body -->
+      <div class="form-group">
+        <label>Email Body:</label>
+        <div class="editor-container">
+          <div class="editor-toolbar" data-editor-id="emailBody">
+            <div class="toolbar-group">
+              <select class="toolbar-select" id="fontSelectBody" title="Font family">
+                <option value="Arial" style="font-family:Arial;">Arial</option>
+                <option value="Calibri" style="font-family:Calibri;">Calibri</option>
+                <option value="Cambria" style="font-family:Cambria;">Cambria</option>
+                <option value="Courier New" style="font-family:'Courier New';">Courier New</option>
+                <option value="Georgia" style="font-family:Georgia;">Georgia</option>
+                <option value="Helvetica" style="font-family:Helvetica;">Helvetica</option>
+                <option value="Impact" style="font-family:Impact;">Impact</option>
+                <option value="Lucida Sans" style="font-family:'Lucida Sans';">Lucida Sans</option>
+                <option value="Open Sans" style="font-family:'Open Sans';">Open Sans</option>
+                <option value="Roboto" style="font-family:Roboto;" selected>Roboto</option>
+                <option value="Segoe UI" style="font-family:'Segoe UI';">Segoe UI</option>
+                <option value="Tahoma" style="font-family:Tahoma;">Tahoma</option>
+                <option value="Times New Roman" style="font-family:'Times New Roman';">Times New Roman</option>
+                <option value="Trebuchet MS" style="font-family:'Trebuchet MS';">Trebuchet MS</option>
+                <option value="Verdana" style="font-family:Verdana;">Verdana</option>
+                <option value="Monaco" style="font-family:Monaco;">Monaco</option>
+                <option value="Baskerville" style="font-family:Baskerville;">Baskerville</option>
+                <option value="Garamond" style="font-family:Garamond;">Garamond</option>
+                <option value="Didot" style="font-family:Didot;">Didot</option>
+                <option value="Lucida Console" style="font-family:'Lucida Console';">Lucida Console</option>
+                <option value="Palatino" style="font-family:Palatino;">Palatino</option>
+                <option value="Book Antiqua" style="font-family:'Book Antiqua';">Book Antiqua</option>
+                <option value="Gill Sans" style="font-family:'Gill Sans';">Gill Sans</option>
+                <option value="Lato" style="font-family:Lato;">Lato</option>
+                <option value="Nunito" style="font-family:Nunito;">Nunito</option>
+                <option value="Ubuntu" style="font-family:Ubuntu;">Ubuntu</option>
+                <option value="Raleway" style="font-family:Raleway;">Raleway</option>
+                <option value="PT Sans" style="font-family:'PT Sans';">PT Sans</option>
+                <option value="Merriweather" style="font-family:Merriweather;">Merriweather</option>
+                <option value="Arvo" style="font-family:Arvo;">Arvo</option>
+              </select>
+            </div>
+            <div class="toolbar-group font-size-control">
+              <label style="margin-right:4px;">Size:</label>
+              <select id="fontSizeDropdownBody">
+                <option value="10">10</option>
+                <option value="12">12</option>
+                <option value="14" selected>14</option>
+                <option value="16">16</option>
+                <option value="18">18</option>
+                <option value="20">20</option>
+                <option value="24">24</option>
+                <option value="28">28</option>
+                <option value="32">32</option>
+              </select>
+              <button class="fs-btn" id="fontSizeUpBody" title="Increase font size">
+                <i class="material-icons">arrow_upward</i>
+              </button>
+              <button class="fs-btn" id="fontSizeDownBody" title="Decrease font size">
+                <i class="material-icons">arrow_downward</i>
+              </button>
+            </div>
+            <div class="toolbar-group">
+              <button class="toolbar-button" data-cmd="bold" title="Bold">
+                <i class="material-icons">format_bold</i>
+              </button>
+              <button class="toolbar-button" data-cmd="italic" title="Italic">
+                <i class="material-icons">format_italic</i>
+              </button>
+              <button class="toolbar-button" data-cmd="underline" title="Underline">
+                <i class="material-icons">format_underlined</i>
+              </button>
+              <button class="toolbar-button" data-cmd="strikeThrough" title="Strike Through">
+                <i class="material-icons">strikethrough_s</i>
+              </button>
+            </div>
+            <div class="toolbar-group">
+              <button class="toolbar-button color-button" id="textColorBtnBody" data-type="foreColor" title="Text color">
+                <i class="material-icons">format_color_text</i>
+                <div class="color-indicator" style="background:#000;"></div>
+              </button>
+              <button class="toolbar-button color-button" id="bgColorBtnBody" data-type="hiliteColor" title="Highlight color">
+                <i class="material-icons">format_color_fill</i>
+                <div class="color-indicator" style="background:transparent;"></div>
+              </button>
+            </div>
+            <div class="toolbar-group">
+              <button class="toolbar-button" data-cmd="justifyLeft" title="Align left">
+                <i class="material-icons">format_align_left</i>
+              </button>
+              <button class="toolbar-button" data-cmd="justifyCenter" title="Align center">
+                <i class="material-icons">format_align_center</i>
+              </button>
+              <button class="toolbar-button" data-cmd="justifyRight" title="Align right">
+                <i class="material-icons">format_align_right</i>
+              </button>
+            </div>
+            <div class="toolbar-group">
+              <button class="toolbar-button" data-cmd="insertUnorderedList" title="Bulleted list">
+                <i class="material-icons">format_list_bulleted</i>
+              </button>
+              <button class="toolbar-button" data-cmd="insertOrderedList" title="Numbered list">
+                <i class="material-icons">format_list_numbered</i>
+              </button>
+            </div>
+            <div class="toolbar-group">
+              <button class="toolbar-button" data-cmd="createLink" title="Insert Link">
+                <i class="material-icons">link</i>
+              </button>
+              <button class="toolbar-button" data-cmd="insertImage" title="Insert Image">
+                <i class="material-icons">image</i>
+              </button>
+              <button class="toolbar-button" data-cmd="code" title="Insert Code Block">
+                <i class="material-icons">code</i>
+              </button>
+            </div>
+            <div class="toolbar-group">
+              <button class="toolbar-button" data-cmd="rawHtml" title="Insert Raw HTML">
+                <i class="material-icons">source</i>
+              </button>
+            </div>
+          </div>
+          <div class="editor-content" id="emailBody" contenteditable="true"></div>
+        </div>
+      </div>
+      
+      <!-- Signature Editor -->
+      <div class="form-group">
+        <label>Email Signature:</label>
+        <div class="editor-container">
+          <div class="editor-toolbar" data-editor-id="emailSignature">
+            <div class="toolbar-group">
+              <select class="toolbar-select" id="fontSelectSignature" title="Font family">
+                <option value="Arial" style="font-family:Arial;">Arial</option>
+                <option value="Calibri" style="font-family:Calibri;">Calibri</option>
+                <option value="Cambria" style="font-family:Cambria;">Cambria</option>
+                <option value="Courier New" style="font-family:'Courier New';">Courier New</option>
+                <option value="Georgia" style="font-family:Georgia;">Georgia</option>
+                <option value="Helvetica" style="font-family:Helvetica;">Helvetica</option>
+                <option value="Impact" style="font-family:Impact;">Impact</option>
+                <option value="Lucida Sans" style="font-family:'Lucida Sans';">Lucida Sans</option>
+                <option value="Open Sans" style="font-family:'Open Sans';">Open Sans</option>
+                <option value="Roboto" style="font-family:Roboto;" selected>Roboto</option>
+                <option value="Segoe UI" style="font-family:'Segoe UI';">Segoe UI</option>
+                <option value="Tahoma" style="font-family:Tahoma;">Tahoma</option>
+                <option value="Times New Roman" style="font-family:'Times New Roman';">Times New Roman</option>
+                <option value="Trebuchet MS" style="font-family:'Trebuchet MS';">Trebuchet MS</option>
+                <option value="Verdana" style="font-family:Verdana;">Verdana</option>
+                <option value="Monaco" style="font-family:Monaco;">Monaco</option>
+                <option value="Baskerville" style="font-family:Baskerville;">Baskerville</option>
+                <option value="Garamond" style="font-family:Garamond;">Garamond</option>
+                <option value="Didot" style="font-family:Didot;">Didot</option>
+                <option value="Lucida Console" style="font-family:'Lucida Console';">Lucida Console</option>
+                <option value="Palatino" style="font-family:Palatino;">Palatino</option>
+                <option value="Book Antiqua" style="font-family:'Book Antiqua';">Book Antiqua</option>
+                <option value="Gill Sans" style="font-family:'Gill Sans';">Gill Sans</option>
+                <option value="Lato" style="font-family:Lato;">Lato</option>
+                <option value="Nunito" style="font-family:Nunito;">Nunito</option>
+                <option value="Ubuntu" style="font-family:Ubuntu;">Ubuntu</option>
+                <option value="Raleway" style="font-family:Raleway;">Raleway</option>
+                <option value="PT Sans" style="font-family:'PT Sans';">PT Sans</option>
+                <option value="Merriweather" style="font-family:Merriweather;">Merriweather</option>
+                <option value="Arvo" style="font-family:Arvo;">Arvo</option>
+              </select>
+            </div>
+            <div class="toolbar-group font-size-control">
+              <label style="margin-right:4px;">Size:</label>
+              <select id="fontSizeDropdownSignature">
+                <option value="10">10</option>
+                <option value="12">12</option>
+                <option value="14" selected>14</option>
+                <option value="16">16</option>
+                <option value="18">18</option>
+                <option value="20">20</option>
+                <option value="24">24</option>
+                <option value="28">28</option>
+                <option value="32">32</option>
+              </select>
+              <button class="fs-btn" id="fontSizeUpSignature" title="Increase font size">
+                <i class="material-icons">arrow_upward</i>
+              </button>
+              <button class="fs-btn" id="fontSizeDownSignature" title="Decrease font size">
+                <i class="material-icons">arrow_downward</i>
+              </button>
+            </div>
+            <div class="toolbar-group">
+              <button class="toolbar-button" data-cmd="bold" title="Bold">
+                <i class="material-icons">format_bold</i>
+              </button>
+              <button class="toolbar-button" data-cmd="italic" title="Italic">
+                <i class="material-icons">format_italic</i>
+              </button>
+              <button class="toolbar-button" data-cmd="underline" title="Underline">
+                <i class="material-icons">format_underlined</i>
+              </button>
+              <button class="toolbar-button" data-cmd="strikeThrough" title="Strike Through">
+                <i class="material-icons">strikethrough_s</i>
+              </button>
+            </div>
+            <div class="toolbar-group">
+              <button class="toolbar-button color-button" id="textColorBtnSignature" data-type="foreColor" title="Text color">
+                <i class="material-icons">format_color_text</i>
+                <div class="color-indicator" style="background:#000;"></div>
+              </button>
+              <button class="toolbar-button color-button" id="bgColorBtnSignature" data-type="hiliteColor" title="Highlight color">
+                <i class="material-icons">format_color_fill</i>
+                <div class="color-indicator" style="background:transparent;"></div>
+              </button>
+            </div>
+            <div class="toolbar-group">
+              <button class="toolbar-button" data-cmd="justifyLeft" title="Align left">
+                <i class="material-icons">format_align_left</i>
+              </button>
+              <button class="toolbar-button" data-cmd="justifyCenter" title="Align center">
+                <i class="material-icons">format_align_center</i>
+              </button>
+              <button class="toolbar-button" data-cmd="justifyRight" title="Align right">
+                <i class="material-icons">format_align_right</i>
+              </button>
+            </div>
+            <div class="toolbar-group">
+              <button class="toolbar-button" data-cmd="insertUnorderedList" title="Bulleted list">
+                <i class="material-icons">format_list_bulleted</i>
+              </button>
+              <button class="toolbar-button" data-cmd="insertOrderedList" title="Numbered list">
+                <i class="material-icons">format_list_numbered</i>
+              </button>
+            </div>
+            <div class="toolbar-group">
+              <button class="toolbar-button" data-cmd="createLink" title="Insert Link">
+                <i class="material-icons">link</i>
+              </button>
+              <button class="toolbar-button" data-cmd="insertImage" title="Insert Image">
+                <i class="material-icons">image</i>
+              </button>
+              <button class="toolbar-button" data-cmd="code" title="Insert Code Block">
+                <i class="material-icons">code</i>
+              </button>
+            </div>
+            <div class="toolbar-group">
+              <button class="toolbar-button" data-cmd="rawHtml" title="Insert Raw HTML">
+                <i class="material-icons">source</i>
+              </button>
+            </div>
+          </div>
+          <div class="editor-content" id="emailSignature" contenteditable="true">
+            <p>Best regards,</p>
+            <p>Your Name</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Attachments -->
+      <div class="form-group">
+        <label>Attachments:</label>
+        <div class="attachments-container" id="dropArea">
+          <i class="material-icons" style="font-size:48px; color:#757575;">cloud_upload</i>
+          <p>Drag & drop or click to upload</p>
+          <button id="uploadButton">Select Files</button>
+          <input type="file" id="fileInput" class="file-input" multiple>
+          <div class="attachment-list" id="attachmentList"></div>
+        </div>
+        <!-- Google Drive Links as Tags Input -->
+        <div class="form-group">
+          <label>Google Drive Links:</label>
+          <div id="driveLinksInput" class="tags-input">
+            <input type="text" placeholder="Paste Drive link and press Enter">
+          </div>
+          <button class="btn-action" id="processDriveLinks">Process Drive Links</button>
+        </div>
+      </div>
+      
+      <!-- Send Button -->
+      <div class="action-row">
+        <span id="attachmentCount">0 files attached</span>
+        <button class="btn-action" id="sendEmailsButton">Send Mass Emails</button>
+      </div>
+      
+      <!-- Status Message -->
+      <div id="statusMessage" class="status-message"></div>
+    </div>
+  </div>
+  
+  <!-- Confirmation Modal -->
+  <div class="modal" id="confirmModal">
+    <div class="modal-content">
+      <span class="modal-close" onclick="closeModal('confirmModal')">X</span>
+      <h3 class="modal-title">Confirm Send</h3>
+      <p>The following recipients will be sent the email:</p>
+      <ul id="confirmRecipients"></ul>
+      <div class="modal-footer">
+        <button class="cancel" id="cancelConfirm">Cancel</button>
+        <button class="confirm" id="confirmSend">Confirm</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Link Modal -->
+  <div class="modal" id="linkModal">
+    <div class="modal-content">
+      <span class="modal-close" onclick="closeModal('linkModal')">X</span>
+      <h3 class="modal-title">Insert Link</h3>
+      <div class="form-group">
+        <label>Link Text:</label>
+        <input type="text" id="linkText">
+      </div>
+      <div class="form-group">
+        <label>URL:</label>
+        <input type="url" id="linkUrl">
+      </div>
+      <div class="modal-footer">
+        <button class="cancel" id="cancelLinkButton">Cancel</button>
+        <button class="confirm" id="insertLinkButton">Insert</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Image Modal -->
+  <div class="modal" id="imageModal">
+    <div class="modal-content">
+      <span class="modal-close" onclick="closeModal('imageModal')">X</span>
+      <h3 class="modal-title">Insert Image</h3>
+      <div class="form-group">
+        <label>Image URL:</label>
+        <input type="url" id="imageUrl">
+      </div>
+      <div class="form-group">
+        <label>Alt Text:</label>
+        <input type="text" id="imageAlt">
+      </div>
+      <div class="modal-footer">
+        <button class="cancel" id="cancelImageButton">Cancel</button>
+        <button class="confirm" id="insertImageButton">Insert</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Code Modal -->
+  <div class="modal" id="codeModal">
+    <div class="modal-content">
+      <span class="modal-close" onclick="closeModal('codeModal')">X</span>
+      <h3 class="modal-title">Insert Code Block</h3>
+      <div class="form-group">
+        <label>Code snippet:</label>
+        <textarea id="codeContent" rows="6"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="cancel" id="cancelCodeButton">Cancel</button>
+        <button class="confirm" id="insertCodeButton">Insert</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Raw HTML Modal -->
+  <div class="modal" id="rawHtmlModal">
+    <div class="modal-content">
+      <span class="modal-close" onclick="closeModal('rawHtmlModal')">X</span>
+      <h3 class="modal-title">Insert Raw HTML</h3>
+      <div class="form-group">
+        <label>Paste your HTML code:</label>
+        <textarea id="rawHtmlContent" rows="6"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Insert Mode:</label>
+        <select id="rawHtmlMode">
+          <option value="insert">Insert at cursor</option>
+          <option value="replace">Replace entire editor</option>
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button class="cancel" id="cancelRawHtmlButton">Cancel</button>
+        <button class="confirm" id="insertRawHtmlButton">Apply</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Progress Modal -->
+  <div class="modal" id="progressModal">
+    <div class="modal-content">
+      <span class="modal-close" onclick="closeModal('progressModal')">X</span>
+      <h3 class="modal-title">Sending Emails</h3>
+      <p>Please wait while your emails are being sent...</p>
+      <div class="progress-container">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+      <p id="progressStatus">Preparing to send emails...</p>
+    </div>
+  </div>
+  
+  <!-- Color Palette Popup (10 columns x 8 rows) -->
+  <div class="color-palette-popup" id="colorPalettePopup">
+    <div style="display:flex; flex-wrap:wrap;">
+      <!-- Row 1 -->
+      <div class="color-swatch" data-color="#000000" style="background:#000000;"></div>
+      <div class="color-swatch" data-color="#434343" style="background:#434343;"></div>
+      <div class="color-swatch" data-color="#666666" style="background:#666666;"></div>
+      <div class="color-swatch" data-color="#999999" style="background:#999999;"></div>
+      <div class="color-swatch" data-color="#B7B7B7" style="background:#B7B7B7;"></div>
+      <div class="color-swatch" data-color="#CCCCCC" style="background:#CCCCCC;"></div>
+      <div class="color-swatch" data-color="#D9D9D9" style="background:#D9D9D9;"></div>
+      <div class="color-swatch" data-color="#EFEFEF" style="background:#EFEFEF;"></div>
+      <div class="color-swatch" data-color="#F3F3F3" style="background:#F3F3F3;"></div>
+      <div class="color-swatch" data-color="#FFFFFF" style="background:#FFFFFF;"></div>
+      <!-- Row 2 -->
+      <div class="color-swatch" data-color="#980000" style="background:#980000;"></div>
+      <div class="color-swatch" data-color="#FF0000" style="background:#FF0000;"></div>
+      <div class="color-swatch" data-color="#FF9800" style="background:#FF9800;"></div>
+      <div class="color-swatch" data-color="#FFFF00" style="background:#FFFF00;"></div>
+      <div class="color-swatch" data-color="#00FF00" style="background:#00FF00;"></div>
+      <div class="color-swatch" data-color="#00FFFF" style="background:#00FFFF;"></div>
+      <div class="color-swatch" data-color="#4A85E8" style="background:#4A85E8;"></div>
+      <div class="color-swatch" data-color="#0000FF" style="background:#0000FF;"></div>
+      <div class="color-swatch" data-color="#9900FF" style="background:#9900FF;"></div>
+      <div class="color-swatch" data-color="#FF00FF" style="background:#FF00FF;"></div>
+      <!-- Row 3 -->
+      <div class="color-swatch" data-color="#E6B8AF" style="background:#E6B8AF;"></div>
+      <div class="color-swatch" data-color="#F4CCCC" style="background:#F4CCCC;"></div>
+      <div class="color-swatch" data-color="#FDE5CD" style="background:#FDE5CD;"></div>
+      <div class="color-swatch" data-color="#FFF3CC" style="background:#FFF3CC;"></div>
+      <div class="color-swatch" data-color="#D9EBD3" style="background:#D9EBD3;"></div>
+      <div class="color-swatch" data-color="#D1E0E3" style="background:#D1E0E3;"></div>
+      <div class="color-swatch" data-color="#C9DBF8" style="background:#C9DBF8;"></div>
+      <div class="color-swatch" data-color="#CFE2F3" style="background:#CFE2F3;"></div>
+      <div class="color-swatch" data-color="#D9D3E9" style="background:#D9D3E9;"></div>
+      <div class="color-swatch" data-color="#EBD1DC" style="background:#EBD1DC;"></div>
+      <!-- Row 4 -->
+      <div class="color-swatch" data-color="#DD7D6B" style="background:#DD7D6B;"></div>
+      <div class="color-swatch" data-color="#EB9899" style="background:#EB9899;"></div>
+      <div class="color-swatch" data-color="#F9CB9C" style="background:#F9CB9C;"></div>
+      <div class="color-swatch" data-color="#FFE598" style="background:#FFE598;"></div>
+      <div class="color-swatch" data-color="#B6D7A8" style="background:#B6D7A8;"></div>
+      <div class="color-swatch" data-color="#A2C4CA" style="background:#A2C4CA;"></div>
+      <div class="color-swatch" data-color="#A4C2F4" style="background:#A4C2F4;"></div>
+      <div class="color-swatch" data-color="#9EC5E9" style="background:#9EC5E9;"></div>
+      <div class="color-swatch" data-color="#B4A7D6" style="background:#B4A7D6;"></div>
+      <div class="color-swatch" data-color="#D5A6BD" style="background:#D5A6BD;"></div>
+      <!-- Row 5 -->
+      <div class="color-swatch" data-color="#CC4124" style="background:#CC4124;"></div>
+      <div class="color-swatch" data-color="#E06665" style="background:#E06665;"></div>
+      <div class="color-swatch" data-color="#F7B16B" style="background:#F7B16B;"></div>
+      <div class="color-swatch" data-color="#FFD966" style="background:#FFD966;"></div>
+      <div class="color-swatch" data-color="#92C47D" style="background:#92C47D;"></div>
+      <div class="color-swatch" data-color="#75A5AF" style="background:#75A5AF;"></div>
+      <div class="color-swatch" data-color="#6D9EEC" style="background:#6D9EEC;"></div>
+      <div class="color-swatch" data-color="#6EA8DC" style="background:#6EA8DC;"></div>
+      <div class="color-swatch" data-color="#8E7CC3" style="background:#8E7CC3;"></div>
+      <div class="color-swatch" data-color="#C27BA0" style="background:#C27BA0;"></div>
+      <!-- Row 6 -->
+      <div class="color-swatch" data-color="#A61B00" style="background:#A61B00;"></div>
+      <div class="color-swatch" data-color="#CC0000" style="background:#CC0000;"></div>
+      <div class="color-swatch" data-color="#E69038" style="background:#E69038;"></div>
+      <div class="color-swatch" data-color="#F1C231" style="background:#F1C231;"></div>
+      <div class="color-swatch" data-color="#6AA84E" style="background:#6AA84E;"></div>
+      <div class="color-swatch" data-color="#44818E" style="background:#44818E;"></div>
+      <div class="color-swatch" data-color="#3B77D8" style="background:#3B77D8;"></div>
+      <div class="color-swatch" data-color="#3C84C6" style="background:#3C84C6;"></div>
+      <div class="color-swatch" data-color="#674EA7" style="background:#674EA7;"></div>
+      <div class="color-swatch" data-color="#A64C79" style="background:#A64C79;"></div>
+      <!-- Row 7 -->
+      <div class="color-swatch" data-color="#841F0B" style="background:#841F0B;"></div>
+      <div class="color-swatch" data-color="#990000" style="background:#990000;"></div>
+      <div class="color-swatch" data-color="#B45F04" style="background:#B45F04;"></div>
+      <div class="color-swatch" data-color="#BF9000" style="background:#BF9000;"></div>
+      <div class="color-swatch" data-color="#38761C" style="background:#38761C;"></div>
+      <div class="color-swatch" data-color="#114F5C" style="background:#114F5C;"></div>
+      <div class="color-swatch" data-color="#0F55CC" style="background:#0F55CC;"></div>
+      <div class="color-swatch" data-color="#095294" style="background:#095294;"></div>
+      <div class="color-swatch" data-color="#351A75" style="background:#351A75;"></div>
+      <div class="color-swatch" data-color="#741A47" style="background:#741A47;"></div>
+      <!-- Row 8 -->
+      <div class="color-swatch" data-color="#5B0D00" style="background:#5B0D00;"></div>
+      <div class="color-swatch" data-color="#660000" style="background:#660000;"></div>
+      <div class="color-swatch" data-color="#783E02" style="background:#783E02;"></div>
+      <div class="color-swatch" data-color="#7F5F00" style="background:#7F5F00;"></div>
+      <div class="color-swatch" data-color="#274E11" style="background:#274E11;"></div>
+      <div class="color-swatch" data-color="#0A343C" style="background:#0A343C;"></div>
+      <div class="color-swatch" data-color="#1B4487" style="background:#1B4487;"></div>
+      <div class="color-swatch" data-color="#053762" style="background:#053762;"></div>
+      <div class="color-swatch" data-color="#1F104C" style="background:#1F104C;"></div>
+      <div class="color-swatch" data-color="#4C0F2F" style="background:#4C0F2F;"></div>
+    </div>
+    <div class="custom-color-row">
+      <input type="text" id="customColorInput" placeholder="#RRGGBB or rgb(...)">
+      <button class="btn-custom-color" id="customColorApplyBtn">Custom</button>
+    </div>
+  </div>
+  
+  <script>
+    // Global snapshots for undo on paste in tags inputs
+    const prevTagsSnapshots = {};
+    
+    /*********************************************************
+     * On Load
+     *********************************************************/
+    document.addEventListener('DOMContentLoaded', function(){
+      loadTokens();
+      initEditor('emailBody', 'fontSelectBody', 'fontSizeDropdownBody', 'fontSizeUpBody', 'fontSizeDownBody', 'textColorBtnBody', 'bgColorBtnBody');
+      initEditor('emailSignature', 'fontSelectSignature', 'fontSizeDropdownSignature', 'fontSizeUpSignature', 'fontSizeDownSignature', 'textColorBtnSignature', 'bgColorBtnSignature');
+      initTagsInput('ccTagsInput');
+      initTagsInput('bccTagsInput');
+      initDriveLinksInput();
+      initFileUpload();
+      document.getElementById('processDriveLinks').addEventListener('click', processDriveLinks);
+      document.getElementById('sendEmailsButton').addEventListener('click', showConfirmModal);
+      initModals();
+      initColorPalette();
+    });
+    
+    /*********************************************************
+     * 1) TOKENS
+     *********************************************************/
+    function loadTokens(){
+      google.script.run
+        .withSuccessHandler(function(tokens){
+          const container = document.getElementById('availableTokens');
+          container.innerHTML = '';
+          tokens.forEach(function(t){
+            const div = document.createElement('div');
+            div.className = 'token';
+            div.textContent = t.token;
+            div.addEventListener('click', function(){ copyToClipboard(t.token); });
+            container.appendChild(div);
+          });
+        })
+        .withFailureHandler(function(err){
+          console.error("Tokens error:", err);
+        })
+        .getAvailableTokens();
+    }
+    function copyToClipboard(text){
+      if(navigator.clipboard && window.isSecureContext){
+        navigator.clipboard.writeText(text).catch(()=>{});
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        ta.remove();
+      }
+    }
+    
+    /*********************************************************
+     * 2) EDITOR (BODY & SIGNATURE)
+     *********************************************************/
+    let currentEditorId = "";
+    function initEditor(editorId, fontSelId, sizeInputId, sizeUpId, sizeDownId, textColorBtnId, bgColorBtnId){
+      const editor = document.getElementById(editorId);
+      const fontSelect = document.getElementById(fontSelId);
+      const sizeInput = document.getElementById(sizeInputId);
+      const sizeUp = document.getElementById(sizeUpId);
+      const sizeDown = document.getElementById(sizeDownId);
+      
+      if(fontSelect){
+        fontSelect.addEventListener('change', function(){
+          editor.focus();
+          document.execCommand('fontName', false, this.value);
+        });
+      }
+      
+      sizeUp.addEventListener('click', function(){
+        let options = sizeInput.options;
+        let idx = sizeInput.selectedIndex;
+        if(idx < options.length - 1){
+          sizeInput.selectedIndex = idx + 1;
+          editor.focus();
+          document.execCommand('fontSize', false, sizeInput.value);
+        }
+      });
+      sizeDown.addEventListener('click', function(){
+        let options = sizeInput.options;
+        let idx = sizeInput.selectedIndex;
+        if(idx > 0){
+          sizeInput.selectedIndex = idx - 1;
+          editor.focus();
+          document.execCommand('fontSize', false, sizeInput.value);
+        }
+      });
+      sizeInput.addEventListener('change', function(){
+        editor.focus();
+        document.execCommand('fontSize', false, this.value);
+      });
+      
+      const toolbar = document.querySelector(`.editor-toolbar[data-editor-id="${editorId}"]`);
+      const buttons = toolbar.querySelectorAll('.toolbar-button[data-cmd]');
+      buttons.forEach(function(btn){
+        btn.addEventListener('click', function(){
+          const cmd = this.dataset.cmd;
+          editor.focus();
+          if(cmd === 'rawHtml'){
+            currentEditorId = editorId;
+            openModal('rawHtmlModal');
+            return;
+          }
+          if(cmd === 'createLink'){
+            currentEditorId = editorId;
+            openModal('linkModal');
+            return;
+          }
+          if(cmd === 'insertImage'){
+            currentEditorId = editorId;
+            openModal('imageModal');
+            return;
+          }
+          if(cmd === 'code'){
+            currentEditorId = editorId;
+            openModal('codeModal');
+            return;
+          }
+          if(cmd === 'hiliteColor'){
+            // Our applyColor function handles highlight.
+            return;
+          }
+          document.execCommand(cmd, false, null);
+        });
+      });
+      
+      const textColorBtn = document.getElementById(textColorBtnId);
+      const bgColorBtn = document.getElementById(bgColorBtnId);
+      textColorBtn.addEventListener('click', function(e){
+        e.stopPropagation();
+        showColorPalette(editorId, 'foreColor', this);
+      });
+      bgColorBtn.addEventListener('click', function(e){
+        e.stopPropagation();
+        showColorPalette(editorId, 'hiliteColor', this);
+      });
+    }
+    
+    /*********************************************************
+     * 3) TAGS INPUT (CC & BCC)
+     *********************************************************/
+    function initTagsInput(containerId){
+      const container = document.getElementById(containerId);
+      const input = container.querySelector('input');
+      input.addEventListener('paste', function(){
+        prevTagsSnapshots[containerId] = container.innerHTML;
+        setTimeout(() => { processEmails(input.value, containerId); input.value = ''; }, 10);
+      });
+      input.addEventListener('keydown', function(e){
+        if(e.key === 'Enter'){
+          e.preventDefault();
+          processEmails(input.value, containerId);
+          input.value = '';
+        }
+        if(e.ctrlKey && e.key === 'z' && input.value.trim() === '' && prevTagsSnapshots[containerId]){
+          container.innerHTML = prevTagsSnapshots[containerId];
+          initTagsInput(containerId);
+          prevTagsSnapshots[containerId] = "";
+          e.preventDefault();
+        }
+      });
+    }
+    
+    function processEmails(text, containerId){
+      const emails = text.split(/[\s,;]+/).filter(e => e.trim());
+      emails.forEach(email => { if(validateEmail(email)) addTag(containerId, email); });
+    }
+    
+    function addTag(containerId, text){
+      const container = document.getElementById(containerId);
+      const input = container.querySelector('input');
+      const tag = document.createElement('div');
+      tag.className = 'tag';
+      tag.textContent = text;
+      tag.addEventListener('click', function(){ tag.remove(); });
+      container.insertBefore(tag, input);
+    }
+    
+    function getTags(containerId){
+      const container = document.getElementById(containerId);
+      const tags = container.querySelectorAll('.tag');
+      const arr = [];
+      tags.forEach(t => { arr.push(t.textContent.trim()); });
+      return arr;
+    }
+    
+    function validateEmail(email){
+      const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return re.test(email);
+    }
+    
+    function initPasteSplit(containerId){}
+    
+    /*********************************************************
+     * 4) DRIVE LINKS INPUT (as tags input)
+     *********************************************************/
+    function initDriveLinksInput(){
+      const container = document.getElementById('driveLinksInput');
+      const input = container.querySelector('input');
+      input.addEventListener('paste', function(){
+        prevTagsSnapshots['driveLinksInput'] = container.innerHTML;
+        setTimeout(() => {
+          let parts = input.value.split(/[\s,;]+/).filter(x => x.trim());
+          parts.forEach(p => processDriveLink(p));
+          input.value = '';
+        }, 10);
+      });
+      input.addEventListener('keydown', function(e){
+        if(e.key === 'Enter'){
+          e.preventDefault();
+          processDriveLink(input.value);
+          input.value = '';
+        }
+        if(e.ctrlKey && e.key === 'z' && input.value.trim() === '' && prevTagsSnapshots['driveLinksInput']){
+          container.innerHTML = prevTagsSnapshots['driveLinksInput'];
+          initDriveLinksInput();
+          prevTagsSnapshots['driveLinksInput'] = "";
+          e.preventDefault();
+        }
+      });
+    }
+    
+    function processDriveLink(link){
+      const container = document.getElementById('driveLinksInput');
+      const tag = document.createElement('div');
+      tag.className = 'tag pending';
+      tag.textContent = link;
+      tag.addEventListener('click', function(){ tag.remove(); });
+      container.insertBefore(tag, container.querySelector('input'));
+      setTimeout(function(){
+        if(link.indexOf("drive.google.com") !== -1){
+          tag.classList.remove('pending');
+          tag.classList.add('valid');
+        } else {
+          tag.classList.remove('pending');
+          tag.classList.add('invalid');
+        }
+      }, 1000);
+    }
+    
+    /*********************************************************
+     * 5) FILE UPLOAD
+     *********************************************************/
+    function initFileUpload(){
+      const dropArea = document.getElementById('dropArea');
+      const fileInput = document.getElementById('fileInput');
+      const uploadBtn = document.getElementById('uploadButton');
+      const attachmentList = document.getElementById('attachmentList');
+      const attachmentCount = document.getElementById('attachmentCount');
+      const attachedFiles = [];
+      
+      uploadBtn.addEventListener('click', () => { fileInput.click(); });
+      fileInput.addEventListener('change', function(){ handleFiles(this.files); });
+      ['dragenter','dragover','dragleave','drop'].forEach(evt => {
+        dropArea.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); }, false);
+      });
+      ['dragenter','dragover'].forEach(evt => {
+        dropArea.addEventListener(evt, () => dropArea.classList.add('drag-over'), false);
+      });
+      ['dragleave','drop'].forEach(evt => {
+        dropArea.addEventListener(evt, () => dropArea.classList.remove('drag-over'), false);
+      });
+      dropArea.addEventListener('drop', function(e){ handleFiles(e.dataTransfer.files); });
+      
+      function handleFiles(files){
+        if(!files.length) return;
+        google.script.run
+          .withSuccessHandler(function(urls){
+            for(let i = 0; i < Math.min(files.length, urls.length); i++){
+              uploadFile(files[i], urls[i]);
+            }
+          })
+          .withFailureHandler(function(err){ showStatus("Error preparing upload: " + err.message, false); })
+          .getUploadUrls(files.length);
+      }
+      
+      function uploadFile(file, fileId){
+        const div = document.createElement('div');
+        div.className = 'attachment-item';
+        div.innerHTML = `
+          <i class="material-icons" style="color:#4285F4;">attach_file</i>
+          <span class="attachment-name">${file.name} (Uploading...)</span>
+          <i class="material-icons" style="color:#F44336; margin-left:8px; cursor:pointer;">close</i>
+        `;
+        attachmentList.appendChild(div);
+        setTimeout(function(){
+          div.querySelector('.attachment-name').textContent = file.name;
+          attachedFiles.push({ id: fileId, name: file.name });
+          updateCount();
+        }, 1000);
+        div.querySelector('.material-icons:last-child').addEventListener('click', function(){
+          div.remove();
+          const idx = attachedFiles.findIndex(x => x.id === fileId);
+          if(idx > -1){
+            attachedFiles.splice(idx, 1);
+            updateCount();
+          }
+        });
+      }
+      
+      function updateCount(){
+        attachmentCount.textContent = attachedFiles.length + (attachedFiles.length === 1 ? " file attached" : " files attached");
+      }
+    }
+    
+    /*********************************************************
+     * 6) CONFIRMATION & SENDING
+     *********************************************************/
+    function showConfirmModal(){
+      google.script.run.withSuccessHandler(function(recipients){
+        const list = document.getElementById('confirmRecipients');
+        list.innerHTML = "";
+        recipients.forEach(function(email){
+          const li = document.createElement('li');
+          li.textContent = email;
+          list.appendChild(li);
+        });
+        openModal('confirmModal');
+      }).getRecipients();
+    }
+    
+    document.getElementById('confirmSend').addEventListener('click', function(){
+      closeModal('confirmModal');
+      sendActualEmails();
+    });
+    document.getElementById('cancelConfirm').addEventListener('click', function(){
+      closeModal('confirmModal');
+    });
+    
+    function sendActualEmails(){
+      const subj = document.getElementById('emailSubject').value.trim();
+      const body = document.getElementById('emailBody').innerHTML;
+      const sig  = document.getElementById('emailSignature').innerHTML;
+      if(!subj){
+        showStatus("Please enter an email subject.", false);
+        return;
+      }
+      if(!body){
+        showStatus("Please enter an email body.", false);
+        return;
+      }
+      const cc = getTags('ccTagsInput');
+      const bcc = getTags('bccTagsInput');
+      const config = {
+        subject: subj,
+        body: body,
+        signature: sig,
+        ccAddresses: cc,
+        bccAddresses: bcc,
+        attachmentIds: []
+      };
+      
+      document.getElementById('progressModal').style.display = 'flex';
+      document.getElementById('progressBar').style.width = '30%';
+      document.getElementById('progressStatus').textContent = 'Sending emails...';
+      
+      google.script.run
+        .withSuccessHandler(function(result){
+          document.getElementById('progressModal').style.display = 'none';
+          if(result.success){
+            showStatus(result.message, true);
+          } else {
+            showStatus(result.message, false);
+          }
+        })
+        .withFailureHandler(function(err){
+          document.getElementById('progressModal').style.display = 'none';
+          showStatus("Error sending emails: " + err.message, false);
+        })
+        .sendMassEmails(config);
+    }
+    
+    /*********************************************************
+     * 7) MODALS (Link, Image, Code, Raw HTML)
+     *********************************************************/
+    function initModals(){
+      document.getElementById('insertLinkButton').addEventListener('click', doInsertLink);
+      document.getElementById('cancelLinkButton').addEventListener('click', () => closeModal('linkModal'));
+      document.getElementById('insertImageButton').addEventListener('click', doInsertImage);
+      document.getElementById('cancelImageButton').addEventListener('click', () => closeModal('imageModal'));
+      document.getElementById('insertCodeButton').addEventListener('click', doInsertCode);
+      document.getElementById('cancelCodeButton').addEventListener('click', () => closeModal('codeModal'));
+      document.getElementById('insertRawHtmlButton').addEventListener('click', doInsertRawHtml);
+      document.getElementById('cancelRawHtmlButton').addEventListener('click', () => closeModal('rawHtmlModal'));
+    }
+    
+    function doInsertLink(){
+      const t = document.getElementById('linkText').value;
+      const u = document.getElementById('linkUrl').value;
+      const editor = document.getElementById(currentEditorId);
+      editor.focus();
+      if(t && u){
+        const sel = window.getSelection();
+        if(sel.rangeCount){
+          const range = sel.getRangeAt(0);
+          range.deleteContents();
+          const a = document.createElement('a');
+          a.href = u;
+          a.textContent = t;
+          range.insertNode(a);
+        }
+      } else if(u){
+        document.execCommand('createLink', false, u);
+      }
+      closeModal('linkModal');
+    }
+    
+    function doInsertImage(){
+      const url = document.getElementById('imageUrl').value;
+      const alt = document.getElementById('imageAlt').value;
+      const editor = document.getElementById(currentEditorId);
+      editor.focus();
+      if(url){
+        const html = `<img src="${url}" alt="${alt||''}" style="max-width:100%;">`;
+        document.execCommand('insertHTML', false, html);
+      }
+      closeModal('imageModal');
+    }
+    
+    function doInsertCode(){
+      const code = document.getElementById('codeContent').value;
+      const editor = document.getElementById(currentEditorId);
+      editor.focus();
+      if(code){
+        const escaped = code.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const html = `<pre style="background:#f5f5f5; padding:10px; border-radius:4px; font-family:monospace;">${escaped}</pre>`;
+        document.execCommand('insertHTML', false, html);
+      }
+      closeModal('codeModal');
+    }
+    
+    function doInsertRawHtml(){
+      const html = document.getElementById('rawHtmlContent').value;
+      const mode = document.getElementById('rawHtmlMode').value;
+      const editor = document.getElementById(currentEditorId);
+      editor.focus();
+      if(html){
+        if(mode === 'replace'){
+          editor.innerHTML = html;
+        } else {
+          document.execCommand('insertHTML', false, html);
+        }
+      }
+      closeModal('rawHtmlModal');
+    }
+    
+    /*********************************************************
+     * 8) COLOR PALETTE
+     *********************************************************/
+    let currentColorCommand = "";
+    let currentColorButton = null;
+    function initColorPalette(){
+      document.body.addEventListener('click', function(){
+        document.getElementById('colorPalettePopup').style.display = 'none';
+      });
+      document.getElementById('colorPalettePopup').addEventListener('click', function(e){
+        e.stopPropagation();
+      });
+      const swatches = document.querySelectorAll('#colorPalettePopup .color-swatch');
+      swatches.forEach(function(swatch){
+        swatch.addEventListener('click', function(){
+          applyColor(this.dataset.color);
+        });
+      });
+      document.getElementById('customColorApplyBtn').addEventListener('click', function(){
+        const val = document.getElementById('customColorInput').value.trim();
+        if(val) applyColor(val);
+      });
+    }
+    
+    function showColorPalette(editorId, command, btnElem){
+      currentEditorId = editorId;
+      currentColorCommand = command;
+      currentColorButton = btnElem;
+      const pop = document.getElementById('colorPalettePopup');
+      const rect = btnElem.getBoundingClientRect();
+      pop.style.left = rect.left + "px";
+      pop.style.top = (rect.bottom + 2) + "px";
+      pop.style.display = "block";
+    }
+    
+    function applyColor(colorVal){
+      document.getElementById('colorPalettePopup').style.display = "none";
+      const indicator = currentColorButton.querySelector('.color-indicator');
+      if(indicator) { indicator.style.background = colorVal; }
+      const editor = document.getElementById(currentEditorId);
+      editor.focus();
+      if(currentColorCommand === 'hiliteColor'){
+        let sel = window.getSelection();
+        if(sel.rangeCount > 0){
+          let range = sel.getRangeAt(0);
+          let span = document.createElement('span');
+          span.style.backgroundColor = colorVal;
+          try {
+            range.surroundContents(span);
+          } catch(ex) {
+            console.error("Cannot surround selection:", ex);
+          }
+        }
+      } else {
+        document.execCommand(currentColorCommand, false, colorVal);
+      }
+    }
+    
+    /*********************************************************
+     * 9) MODALS
+     *********************************************************/
+    function openModal(id){ document.getElementById(id).style.display = 'flex'; }
+    function closeModal(id){ document.getElementById(id).style.display = 'none'; }
+    
+    /*********************************************************
+     * 10) CONFIRMATION & SENDING
+     *********************************************************/
+    function showConfirmModal(){
+      google.script.run.withSuccessHandler(function(recipients){
+        const list = document.getElementById('confirmRecipients');
+        list.innerHTML = "";
+        recipients.forEach(function(email){
+          const li = document.createElement('li');
+          li.textContent = email;
+          list.appendChild(li);
+        });
+        openModal('confirmModal');
+      }).getRecipients();
+    }
+    
+    document.getElementById('confirmSend').addEventListener('click', function(){
+      closeModal('confirmModal');
+      sendActualEmails();
+    });
+    document.getElementById('cancelConfirm').addEventListener('click', function(){
+      closeModal('confirmModal');
+    });
+    
+    function sendActualEmails(){
+      const subj = document.getElementById('emailSubject').value.trim();
+      const body = document.getElementById('emailBody').innerHTML;
+      const sig  = document.getElementById('emailSignature').innerHTML;
+      if(!subj){ showStatus("Please enter an email subject.", false); return; }
+      if(!body){ showStatus("Please enter an email body.", false); return; }
+      const cc = getTags('ccTagsInput');
+      const bcc = getTags('bccTagsInput');
+      const config = {
+        subject: subj,
+        body: body,
+        signature: sig,
+        ccAddresses: cc,
+        bccAddresses: bcc,
+        attachmentIds: []
+      };
+      
+      document.getElementById('progressModal').style.display = 'flex';
+      document.getElementById('progressBar').style.width = '30%';
+      document.getElementById('progressStatus').textContent = 'Sending emails...';
+      
+      google.script.run
+        .withSuccessHandler(function(result){
+          document.getElementById('progressModal').style.display = 'none';
+          if(result.success){
+            showStatus(result.message, true);
+          } else {
+            showStatus(result.message, false);
+          }
+        })
+        .withFailureHandler(function(err){
+          document.getElementById('progressModal').style.display = 'none';
+          showStatus("Error sending emails: " + err.message, false);
+        })
+        .sendMassEmails(config);
+    }
+    
+    /*********************************************************
+     * 10) STATUS MESSAGE
+     *********************************************************/
+    function showStatus(msg, success){
+      const st = document.getElementById('statusMessage');
+      st.textContent = msg;
+      st.style.display = 'block';
+      st.className = 'status-message';
+      if(success === true){
+        st.classList.add('status-success');
+        setTimeout(() => { st.style.display = 'none'; }, 5000);
+      } else if(success === false){
+        st.classList.add('status-error');
+      }
+    }
+  </script>
+</body>
+</html>
