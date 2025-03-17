@@ -377,4 +377,550 @@
       </div>
       
       <!-- Send Button -->
-      <div class="
+      <div class="form-section">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <button type="button" id="testEmailBtn" class="btn btn-secondary">Send Test Email</button>
+            <button type="button" id="insertTokenBtn" class="btn btn-secondary ms-2">Insert Token</button>
+          </div>
+          <div>
+            <button type="button" id="previewBtn" class="btn btn-secondary">Preview</button>
+            <button type="submit" id="sendBtn" class="btn btn-primary ms-2">Send Mass Email</button>
+          </div>
+        </div>
+        
+        <!-- Progress Bar (hidden initially) -->
+        <div id="progressContainer" class="progress-container" style="display: none;">
+          <div class="progress">
+            <div id="progressBar" class="progress-bar" style="width: 0%"></div>
+          </div>
+          <div id="sendStatus" class="send-status"></div>
+        </div>
+      </div>
+    </form>
+  </div>
+  
+  <!-- Modals -->
+  <!-- Settings Modal -->
+  <div id="settingsModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 class="modal-title">Settings</h3>
+        <button type="button" class="modal-close" data-dismiss="modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="settingsForm">
+          <div class="mb-3">
+            <label for="defaultSignature">Default Signature</label>
+            <textarea id="defaultSignature" class="form-control" rows="4"></textarea>
+          </div>
+          <div class="mb-3">
+            <label for="defaultSheet">Default Sheet Name</label>
+            <input type="text" id="defaultSheet" class="form-control" placeholder="Sheet name for recipient data">
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+        <button type="button" id="saveSettingsBtn" class="btn btn-primary">Save Settings</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Token Selector Modal -->
+  <div id="tokenModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 class="modal-title">Insert Personalization Token</h3>
+        <button type="button" class="modal-close" data-dismiss="modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>Select a column from your sheet to insert as a personalization token:</p>
+        <select id="tokenSelector" class="form-control mb-3">
+          <!-- Options will be dynamically populated -->
+        </select>
+        <div class="alert alert-secondary">
+          <small>Tokens will be replaced with recipient-specific data when emails are sent.</small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+        <button type="button" id="insertSelectedTokenBtn" class="btn btn-primary">Insert</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Preview Modal -->
+  <div id="previewModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 class="modal-title">Email Preview</h3>
+        <button type="button" class="modal-close" data-dismiss="modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label>Subject:</label>
+          <div id="previewSubject" class="p-2 border rounded"></div>
+        </div>
+        <div class="mb-3">
+          <label>Body:</label>
+          <div id="previewBody" class="p-2 border rounded" style="max-height: 400px; overflow-y: auto;"></div>
+        </div>
+        <div id="previewAttachments">
+          <label>Attachments:</label>
+          <ul id="previewAttachmentList" class="list-group"></ul>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- JavaScript -->
+  <script>
+    // Initialize when DOM is ready
+    document.addEventListener('DOMContentLoaded', function() {
+      // Initialize rich text editor
+      tinymce.init({
+        selector: '#emailBody',
+        height: 300,
+        menubar: true,
+        plugins: 'link image code table lists fullscreen paste',
+        toolbar: 'undo redo | formatselect | bold italic | alignleft aligncenter alignright | bullist numlist | link image | table | code',
+        setup: function(editor) {
+          // Add custom signature button
+          editor.ui.registry.addButton('signature', {
+            text: 'Signature',
+            onAction: function() {
+              loadUserSignature().then(function(signature) {
+                editor.insertContent(signature);
+              });
+            }
+          });
+        }
+      });
+      
+      // Initialize tags input
+      $('.tagsinput').tagsinput({
+        trimValue: true,
+        confirmKeys: [13, 44], // Enter and comma
+        tagClass: function() {
+          return 'tag';
+        }
+      });
+      
+      // File upload handling
+      setupFileUpload();
+      
+      // Button event listeners
+      setupEventListeners();
+      
+      // Load initial data
+      loadInitialData();
+    });
+    
+    // File Upload Functionality
+    function setupFileUpload() {
+      const dropArea = document.getElementById('dropArea');
+      const fileInput = document.getElementById('fileInput');
+      const selectFilesBtn = document.getElementById('selectFilesBtn');
+      const attachmentList = document.getElementById('attachmentList');
+      
+      // Click on select files button
+      selectFilesBtn.addEventListener('click', function() {
+        fileInput.click();
+      });
+      
+      // Handle file selection
+      fileInput.addEventListener('change', function() {
+        handleFiles(this.files);
+      });
+      
+      // Drag and drop events
+      dropArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        dropArea.classList.add('drag-over');
+      });
+      
+      dropArea.addEventListener('dragleave', function() {
+        dropArea.classList.remove('drag-over');
+      });
+      
+      dropArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        dropArea.classList.remove('drag-over');
+        handleFiles(e.dataTransfer.files);
+      });
+      
+      // Handle the selected files
+      function handleFiles(files) {
+        for (const file of files) {
+          uploadFile(file).then(function(result) {
+            if (result.success) {
+              addAttachmentToList(result);
+            } else {
+              alert('Failed to upload: ' + file.name);
+            }
+          });
+        }
+      }
+      
+      // Upload a file to Drive
+      async function uploadFile(file) {
+        try {
+          // Convert file to base64
+          const base64 = await fileToBase64(file);
+          
+          // Call server-side function to upload to Drive
+          return google.script.run
+            .withSuccessHandler(function(result) {
+              return result;
+            })
+            .withFailureHandler(function(error) {
+              console.error('Error uploading file:', error);
+              return { success: false, error: error };
+            })
+            .uploadFileToDrive({
+              name: file.name,
+              mimeType: file.type,
+              content: base64.split(',')[1] // Remove the data URL prefix
+            });
+        } catch (error) {
+          console.error('Error processing file:', error);
+          return { success: false, error: error.toString() };
+        }
+      }
+      
+      // Convert file to base64
+      function fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }
+      
+      // Add attachment to the UI list
+      function addAttachmentToList(attachment) {
+        const item = document.createElement('div');
+        item.className = 'attachment-item';
+        item.dataset.fileId = attachment.fileId;
+        
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'attachment-name';
+        nameSpan.textContent = attachment.name;
+        
+        const removeBtn = document.createElement('span');
+        removeBtn.className = 'attachment-remove';
+        removeBtn.textContent = '×';
+        removeBtn.addEventListener('click', function() {
+          item.remove();
+        });
+        
+        item.appendChild(nameSpan);
+        item.appendChild(removeBtn);
+        attachmentList.appendChild(item);
+      }
+    }
+    
+    // Event Listeners Setup
+    function setupEventListeners() {
+      // Settings button
+      document.getElementById('settingsBtn').addEventListener('click', function() {
+        showModal('settingsModal');
+        loadSettings();
+      });
+      
+      // Test email button
+      document.getElementById('testEmailBtn').addEventListener('click', function() {
+        sendTestEmail();
+      });
+      
+      // Insert token button
+      document.getElementById('insertTokenBtn').addEventListener('click', function() {
+        showModal('tokenModal');
+        loadTokenOptions();
+      });
+      
+      // Insert selected token button
+      document.getElementById('insertSelectedTokenBtn').addEventListener('click', function() {
+        insertSelectedToken();
+        hideModal('tokenModal');
+      });
+      
+      // Preview button
+      document.getElementById('previewBtn').addEventListener('click', function() {
+        showEmailPreview();
+      });
+      
+      // Send button
+      document.getElementById('emailForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        sendMassEmails();
+      });
+      
+      // Save settings button
+      document.getElementById('saveSettingsBtn').addEventListener('click', function() {
+        saveSettings();
+        hideModal('settingsModal');
+      });
+      
+      // Close modal buttons
+      document.querySelectorAll('.modal-close, [data-dismiss="modal"]').forEach(element => {
+        element.addEventListener('click', function() {
+          const modal = this.closest('.modal-backdrop');
+          if (modal) {
+            hideModal(modal.id);
+          }
+        });
+      });
+    }
+    
+    // Load Initial Data
+    function loadInitialData() {
+      // Load user signature
+      loadUserSignature();
+      
+      // Load recipient data from sheet
+      loadRecipientData();
+    }
+    
+    // API Functions
+    // Load User Signature
+    function loadUserSignature() {
+      return new Promise((resolve) => {
+        google.script.run
+          .withSuccessHandler(function(result) {
+            if (result.success) {
+              resolve(result.signature);
+            } else {
+              console.error('Error loading signature:', result.error);
+              resolve('<p>Best regards,<br>Your Name</p>');
+            }
+          })
+          .withFailureHandler(function(error) {
+            console.error('Error loading signature:', error);
+            resolve('<p>Best regards,<br>Your Name</p>');
+          })
+          .getUserSignature();
+      });
+    }
+    
+    // Load Settings
+    function loadSettings() {
+      google.script.run
+        .withSuccessHandler(function(settings) {
+          document.getElementById('defaultSignature').value = settings.emailSignature || '';
+          document.getElementById('defaultSheet').value = settings.defaultSheet || '';
+        })
+        .withFailureHandler(function(error) {
+          console.error('Error loading settings:', error);
+        })
+        .getUserSettings();
+    }
+    
+    // Save Settings
+    function saveSettings() {
+      const settings = {
+        emailSignature: document.getElementById('defaultSignature').value,
+        defaultSheet: document.getElementById('defaultSheet').value
+      };
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            alert('Settings saved successfully!');
+          } else {
+            alert('Error saving settings: ' + result.error);
+          }
+        })
+        .withFailureHandler(function(error) {
+          alert('Error saving settings: ' + error);
+        })
+        .saveUserSettings(settings);
+    }
+    
+    // Load Recipient Data
+    function loadRecipientData() {
+      // Get default sheet or use 'Sheet1'
+      const sheetName = localStorage.getItem('defaultSheet') || 'Sheet1';
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            window.recipientData = result.data;
+            populateTokenOptions(result.data);
+          } else {
+            console.error('Error loading recipient data:', result.error);
+          }
+        })
+        .withFailureHandler(function(error) {
+          console.error('Error loading recipient data:', error);
+        })
+        .getRecipientData({ sheetName: sheetName, columns: ['*'] });
+    }
+    
+    // Load Token Options
+    function loadTokenOptions() {
+      if (!window.recipientData || !window.recipientData[0]) {
+        alert('No recipient data available. Please check your sheet.');
+        return;
+      }
+      
+      const tokenSelector = document.getElementById('tokenSelector');
+      tokenSelector.innerHTML = '';
+      
+      // Get column names from first recipient
+      const columns = Object.keys(window.recipientData[0]);
+      
+      // Add options
+      columns.forEach(column => {
+        const option = document.createElement('option');
+        option.value = column;
+        option.textContent = column;
+        tokenSelector.appendChild(option);
+      });
+    }
+    
+    // Insert Selected Token
+    function insertSelectedToken() {
+      const tokenSelector = document.getElementById('tokenSelector');
+      const tokenName = tokenSelector.value;
+      
+      if (!tokenName) return;
+      
+      // Format as {tokenName}
+      const tokenText = '{' + tokenName + '}';
+      
+      // Insert into TinyMCE
+      tinymce.activeEditor.execCommand('mceInsertContent', false, tokenText);
+    }
+    
+    // Send Test Email
+    function sendTestEmail() {
+      // Get current form data
+      const formData = getFormData();
+      
+      // Use only the first recipient for testing
+      if (formData.to.length === 0) {
+        alert('Please add at least one recipient for test email.');
+        return;
+      }
+      
+      const testOptions = {
+        ...formData,
+        to: [formData.to[0]],
+        cc: [],
+        bcc: [],
+        isTest: true
+      };
+      
+      // Send test email
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            alert('Test email sent successfully to ' + testOptions.to[0]);
+          } else {
+            alert('Error sending test email: ' + result.error);
+          }
+        })
+        .withFailureHandler(function(error) {
+          alert('Error sending test email: ' + error);
+        })
+        .sendMassEmails(testOptions);
+    }
+    
+    // Show Email Preview
+    function showEmailPreview() {
+      const formData = getFormData();
+      
+      // Display in preview modal
+      document.getElementById('previewSubject').textContent = formData.subject;
+      document.getElementById('previewBody').innerHTML = formData.body;
+      
+      // Show attachments
+      const previewAttachmentList = document.getElementById('previewAttachmentList');
+      previewAttachmentList.innerHTML = '';
+      
+      if (formData.attachments.length > 0) {
+        formData.attachments.forEach(attachment => {
+          const li = document.createElement('li');
+          li.className = 'list-group-item';
+          li.textContent = attachment.name;
+          previewAttachmentList.appendChild(li);
+        });
+      } else {
+        const li = document.createElement('li');
+        li.className = 'list-group-item';
+        li.textContent = 'No attachments';
+        previewAttachmentList.appendChild(li);
+      }
+      
+      showModal('previewModal');
+    }
+    
+    // Send Mass Emails
+    function sendMassEmails() {
+      const formData = getFormData();
+      
+      // Validate form
+      if (formData.to.length === 0) {
+        alert('Please add at least one recipient.');
+        return;
+      }
+      
+      if (!formData.subject) {
+        alert('Please add a subject line.');
+        return;
+      }
+      
+      if (!formData.body) {
+        alert('Please add email content.');
+        return;
+      }
+      
+      // Show progress
+      const progressContainer = document.getElementById('progressContainer');
+      const progressBar = document.getElementById('progressBar');
+      const sendStatus = document.getElementById('sendStatus');
+      
+      progressContainer.style.display = 'block';
+      progressBar.style.width = '0%';
+      sendStatus.textContent = 'Preparing to send...';
+      
+      // Disable send button
+      document.getElementById('sendBtn').disabled = true;
+      
+      // Send emails
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            progressBar.style.width = '100%';
+            sendStatus.textContent = `Successfully sent ${result.sent.length} emails.`;
+            
+            if (result.failed.length > 0) {
+              sendStatus.textContent += ` Failed to send ${result.failed.length} emails.`;
+            }
+          } else {
+            progressBar.style.width = '0%';
+            sendStatus.textContent = 'Error: ' + result.error;
+          }
+          
+          // Re-enable send button
+          document.getElementById('sendBtn').disabled = false;
+        })
+        .withFailureHandler(function(error) {
+          progressBar.style.width = '0%';
+          sendStatus.textContent = 'Error: ' + error;
+          document.getElementById('sendBtn').disabled = false;
+        })
+        .sendMassEmails(formData);
+    }
+    
+    // Helper Functions
+    // Get Form Data
+    function getFormData() {
+      return {
+        subject: document.getElementById('emailSubject').value,
